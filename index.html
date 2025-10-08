@@ -5,83 +5,138 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Curriculum Vitae Digital - Rajastara Satyatanara</title>
     <style>
+        /* BASE STYLE (MOBILE-FIRST) - Tampilan Default untuk HP */
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 800px;
+        margin: 20px auto; /* Margin lebih kecil di HP */
+        padding: 15px; /* Padding lebih kecil di HP */
+        background-color: #f7f7f7; 
+        line-height: 1.6;
+        color: #333;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Bayangan lebih ringan di HP */
+    }
+    .header {
+        /* Di HP, kita buat display: block atau flex-direction: column
+           agar foto dan info kontak tersusun ke bawah */
+        display: flex;
+        flex-direction: column; /* Ini yang bikin responsif di layar kecil */
+        align-items: center;
+        padding-bottom: 20px;
+        border-bottom: 3px solid #00c6ff; /* Garis lebih tipis */
+        margin-bottom: 20px;
+        text-align: center; /* Teks header rata tengah di HP */
+    }
+    .header h1 {
+        margin: 10px 0 5px 0; /* Tambah margin setelah foto */
+        color: #007bff; 
+        font-size: 2em; /* Ukuran font sedikit dikecilkan di HP */
+        letter-spacing: 1px;
+    }
+    .profile-photo {
+        width: 120px; /* Ukuran foto lebih kecil di HP */
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #000000; 
+        margin-right: 0; /* Hapus margin-right bawaan */
+    }
+    .info-contact {
+        text-align: center; /* Rata tengah di HP */
+        width: 100%; /* Lebar penuh */
+    }
+    .info-contact p {
+        margin: 3px 0;
+        font-size: 0.9em;
+    }
+    .info-contact a {
+        color: #007bff;
+        text-decoration: none;
+    }
+    .info-contact a:hover {
+        text-decoration: underline;
+    }
+    h2 {
+        border-bottom: 2px solid #ccc;
+        padding-bottom: 5px;
+        margin-top: 30px;
+        color: #007bff;
+        font-size: 1.5em;
+    }
+    ul {
+        padding-left: 20px;
+        list-style: square; 
+    }
+    .lainnya {
+        margin-bottom: 20px;
+    }
+    .lainnya h3 {
+        margin: 0;
+        color: #007bff;
+        font-size: 1.1em;
+    }
+    .lainnya p {
+        margin: 2px 0;
+        font-style: italic;
+        color: #666;
+    }
+    .skills ul {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center; /* Rata tengah di HP */
+        gap: 8px;
+        list-style: none;
+        padding: 0;
+    }
+    .skills ul li {
+        background-color: #00b3ff; 
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.85em;
+        font-weight: bold;
+        margin-bottom: 5px;
+    } 
+
+    /* MEDIA QUERY untuk Tablet dan PC (Lebar layar min 600px) */
+    @media (min-width: 600px) {
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 800px;
             margin: 40px auto;
             padding: 30px;
-            background-color: #f7f7f7; 
-            line-height: 1.6;
-            color: #333;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         .header {
-            display: flex;
-            align-items: center;
-            padding-bottom: 20px;
-            border-bottom: 5px solid #00c6ff; 
+            /* Ubah kembali ke layout aslinya: foto di kiri, teks di kanan */
+            flex-direction: row; 
+            text-align: left;
+            border-bottom: 5px solid #00c6ff;
             margin-bottom: 30px;
         }
         .header h1 {
-            margin: 0;
-            color: #007bff; 
-            font-size: 2.5em;
+            font-size: 2.5em; /* Kembali ke ukuran font PC */
             letter-spacing: 1.5px;
+            margin: 0;
         }
         .profile-photo {
-            width: 150px;
+            width: 150px; /* Kembali ke ukuran foto PC */
             height: 150px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #000000; 
-            margin-right: 60px;
+            margin-right: 60px; /* Tambah lagi jarak di PC */
         }
         .info-contact {
-            text-align: left;
+            text-align: left; /* Rata kiri di PC */
         }
         .info-contact p {
-            margin: 3px 0;
             font-size: 0.95em;
         }
-        .info-contact a {
-            color: #007bff;
-            text-decoration: none;
-        }
-        .info-contact a:hover {
-            text-decoration: underline;
-        }
-        ul {
-            padding-left: 20px;
-            list-style: square; 
-        }
-        .lainnya {
-            margin-bottom: 20px;
-        }
-        .lainnya h3 {
-            margin: 0;
-            color: #007bff;
-            font-size: 1.1em;
-        }
-        .lainnya p {
-            margin: 2px 0;
-            font-style: italic;
-            color: #666;
-        }
         .skills ul {
-            display: flex;
-            flex-wrap: wrap;
+            justify-content: flex-start; /* Rata kiri di PC */
             gap: 10px;
-            list-style: none;
-            padding: 0;
         }
-         .skills ul li {
-            background-color: #00b3ff; 
-            color: white;
-            padding: 5px 12px;
-            border-radius: 5px;
+        .skills ul li {
             font-size: 0.9em;
-            font-weight: bold;
-        } 
+        }
+    }
+</style>
     </style>
 </head>
 <body>
