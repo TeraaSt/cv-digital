@@ -3,265 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Curriculum Vitae Digital - Rajastara Satyatanara</title>
-    <style>
-        
-    /* BASE STYLE (MOBILE-FIRST) - Tampilan Default untuk HP */
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        max-width: 800px;
-        margin: 15px auto; /* Margin atas-bawah dikurangi lagi biar pas */
-        padding: 15px; /* Padding standar, tidak terlalu tebal */
-        background-color: #ffffff; /* **DIUBAH:** Ganti ke putih bersih (#ffffff) untuk kesan modern & bersih */ 
-        line-height: 1.6;
-        color: #333;
-        /* **DIUBAH:** Shadow lebih ringan untuk HP agar tidak mengganggu */
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); 
-    }
-    .header {
-        display: flex;
-        flex-direction: column; 
-        align-items: center;
-        padding-bottom: 15px; /* Dikurangi sedikit */
-        border-bottom: 3px solid #00c6ff; 
-        margin-bottom: 20px;
-        text-align: center; 
-    }
-    /* ... (CSS bagian lain seperti h1, profile-photo, info-contact, dll, tetap sama) ... */
-    
-    .header h1 {
-        margin: 10px 0 5px 0; 
-        color: #007bff; 
-        font-size: 2em;
-        letter-spacing: 1px;
-    }
-    .profile-photo {
-        width: 120px; 
-        height: 120px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid #000000; 
-        margin-right: 0; 
-    }
-    .info-contact {
-        text-align: center;
-        width: 100%;
-    }
-    .info-contact p {
-        margin: 3px 0;
-        font-size: 0.9em;
-    }
-    .info-contact a {
-        color: #007bff;
-        text-decoration: none;
-    }
-    .info-contact a:hover {
-        text-decoration: underline;
-    }
-    h2 {
-        border-bottom: 2px solid #ccc;
-        padding-bottom: 5px;
-        margin-top: 30px;
-        color: #007bff;
-        font-size: 1.5em;
-    }
-    ul {
-        padding-left: 20px;
-        list-style: square; 
-    }
-    .lainnya {
-        margin-bottom: 20px;
-    }
-    .lainnya h3 {
-        margin: 0;
-        color: #007bff;
-        font-size: 1.1em;
-    }
-    .lainnya p {
-        margin: 2px 0;
-        font-style: italic;
-        color: #666;
-    }
-    .skills ul {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 8px;
-        list-style: none;
-        padding: 0;
-    }
-    .skills ul li {
-        background-color: #00b3ff; 
-        color: white;
-        padding: 5px 10px;
-        border-radius: 5px;
-        font-size: 0.85em;
-        font-weight: bold;
-        margin-bottom: 5px;
-    } 
+    <title>InforMind Admin Kirim Event (Spark Plan)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tambahkan Firebase SDK untuk Database -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
 
-    /* MEDIA QUERY untuk Tablet dan PC (Lebar layar min 600px) */
-    @media (min-width: 600px) {
+    <style>  
         body {
-            margin: 40px auto;
-            padding: 30px;
-            /* **DIUBAH:** Shadow dikembalikan ke nilai tebal yang cocok di PC */
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
-        }
-        .header {
-            flex-direction: row; 
-            text-align: left;
-            padding-bottom: 20px;
-            border-bottom: 5px solid #00c6ff;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            font-size: 2.5em;
-            letter-spacing: 1.5px;
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
             margin: 0;
         }
-        .profile-photo {
-            width: 150px; 
-            height: 150px;
-            margin-right: 60px; 
+        .container {
+            width: 90%;
+            max-width: 500px;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
         }
-        .info-contact {
-            text-align: left;
+        button {
+            transition: all 0.15s ease-in-out;
         }
-        .info-contact p {
-            font-size: 0.95em;
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4);
         }
-        .skills ul {
-            justify-content: flex-start;
-            gap: 10px;
-        }
-        .skills ul li {
-            font-size: 0.9em;
-        }
-    }
-
-    @media (min-width: 600px) {
-        body {
-            margin: 40px auto;
-            padding: 30px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            /* Ubah kembali ke layout aslinya: foto di kiri, teks di kanan */
-            flex-direction: row; 
-            text-align: left;
-            border-bottom: 5px solid #00c6ff;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            font-size: 2.5em; /* Kembali ke ukuran font PC */
-            letter-spacing: 1.5px;
-            margin: 0;
-        }
-        .profile-photo {
-            width: 190px; /* Kembali ke ukuran foto PC */
-            height: 150px;
-            margin-right: 60px; /* Tambah lagi jarak di PC */
-            border-radius: 50%;
-        }
-        .info-contact {
-            text-align: left; /* Rata kiri di PC */
-        }
-        .info-contact p {
-            font-size: 0.95em;
-        }
-        .skills ul {
-            justify-content: flex-start; /* Rata kiri di PC */
-            gap: 10px;
-        }
-        .skills ul li {
-            font-size: 0.9em;
-        }
-    }
-</style>
     </style>
 </head>
 <body>
-    
-    <div class="header">
-        <img src="https://raw.githubusercontent.com/TeraaSt/FotoCv/refs/heads/main/foto%20pas%20rajastara%20.jpg" alt="Foto Profil Rajastara Satyaa" class="profile-photo">
-        <div class="info-contact">
-            <h1>RAJASTARA SATYATANARA</h1>
-            <p><strong>Content Creator & Mahasiswa Informatika</strong></p>
-            <p>Email: <a href="mailto:satyatanara777@gmail.com">satyatanara777@gmail.com</a></p>
-            <p>Telepon: <a href="tel:+6285725726786">0857-2572-6786</a></p>
-            <p>Alamat: Bantul, D.I. Yogyakarta</p>
-            <p>Portofolio Digital: <a href="https://www.instagram.com/taeraamissu/" target="blank">Instagram</a></p>
+    <div class="container">
+        <h1 class="text-3xl font-extrabold text-indigo-700 mb-2">InforMind Event Creator</h1>
+        <p class="text-sm text-gray-500 mb-6">Tambahkan Event Baru ke Daftar Realtime Mahasiswa.</p>
+
+        <!-- Form Event -->
+        <div id="notification-form">
+            <div class="mb-4">
+                <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Nama Event (Judul)</label>
+                <input type="text" id="title" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="Contoh: Kuliah Umum AI Marketing" maxlength="50">
+            </div>
+            
+            <div class="mb-4">
+                <label for="event-date" class="block text-sm font-medium text-gray-700 mb-1">Tanggal & Waktu Event</label>
+                <input type="datetime-local" id="event-date" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div class="mb-6">
+                <label for="body" class="block text-sm font-medium text-gray-700 mb-1">Deskripsi Singkat Event</label>
+                <textarea id="body" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="Lokasi, Pembicara, dan detail penting lainnya..." maxlength="250"></textarea>
+                <p class="text-xs text-gray-400 mt-1 text-right"><span id="char-count">0</span>/250 karakter</p>
+            </div>
+            
+            <button id="send-button" onclick="kirimEvent()" class="w-full bg-indigo-600 text-white font-semibold p-3 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center">
+                <span id="button-text">TAMBAH EVENT BARU</span>
+                <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </button>
         </div>
+
+        <!-- Feedback Notifikasi -->
+        <div id="status-message" class="mt-4 p-3 rounded-lg text-center font-medium hidden"></div>
+
     </div>
 
-    <section>
-        <h2>PROFIL SINGKAT</h2>
-        <p>Saya mahasiswa Universitas Teknologi Yogyakarta jurusan Informatika yang suka dengan dunia teknologi dan media sosial. Saya juga membuat konten di TikTok dan Instagram, biasanya tentang aktivitas kuliah, tips belajar, dan hal-hal ringan seputar teknologi. Saat ini saya masih belajar banyak hal terutama tentang AI dan marketing digital.</p>
-    </section>
-
-    <section>
-        <h2>KEAHLIAN (HARD & SOFT SKILLS)</h2>
-        <div class="skills">
-            <ul>
-                <li>Video Editing</li>
-                <li>Content Planning</li>
-                <li>Canva & Desain Dasar</li>
-                <li>AI Tools</li>
-                <li>Komunikasi & Kerja Tim</li>
-            </ul>
-        </div>
-    </section>
-
-    <section>
-        <h2>PENGALAMAN KONTEN KREATIF</h2>
-        <div class="lainnya">
-            <h3>Content Creator</h3>
-            <p>TikTok, YouTube, dan Instagram | 2023 - Sekarang</p>
-            <ul>
-                <li>Membuat berbagai konten ringan seputar teknologi dan aktivitas kuliah.</li>
-                <li>Berinteraksi dengan audiens dan mengembangkan gaya konten sendiri.</li>
-            </ul>
-        </div>
+    <script>
+        // PENTING: GANTI DENGAN FIREBASE CONFIG PROYEK informind-17dca KAMU
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxylTPNCo5bPgitF34WQLX6ONIgqRGWvg",
+  authDomain: "informind-17dca.firebaseapp.com",
+  databaseURL: "https://informind-17dca-default-rtdb.firebaseio.com",
+  projectId: "informind-17dca",
+  storageBucket: "informind-17dca.firebasestorage.app",
+  messagingSenderId: "692443703186",
+  appId: "1:692443703186:web:54b7568366f55ed36a834b",
+        };
         
-        <div class="lainnya">
-            <h3>Pengalaman Kerja</h3>
-            <p>SMK N 1 SEWON | 2024-2025</p>
-            <ul>
-                <li>Magang sebagai anggota IT di Laboratorium Medis Klinik Cito</li>
-            </ul>
-        </div>
-    </section>
+        // Inisialisasi Firebase App
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-    <section>
-        <h2>PENDIDIKAN</h2>
-        <div class="lainnya">
-            <h3>Mahasiswa S1 Informatika, Fakultas Sains & Teknologi</h3>
-            <p>Universitas Teknologi Yogyakarta (UTY) | Angkatan 2025/2026</p>
-        </div>
-    </section>
+        const bodyTextarea = document.getElementById('body');
+        const charCount = document.getElementById('char-count');
+        const statusMessage = document.getElementById('status-message');
+        const sendButton = document.getElementById('send-button');
+        const buttonText = document.getElementById('button-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        
+        // Update character count real-time
+        bodyTextarea.addEventListener('input', () => {
+            charCount.textContent = bodyTextarea.value.length;
+        });
 
-    <section> 
-        <div class="lainnya">
-            <h3>Pendidikan Terakhir</h3>
-            <ul>
-                <li> 2013-2019 SD N 2 PADOKAN </li>
-                <li> 2019-2022 MTS N 1 BANTUL </li>
-                <li> 2022-2025 SMK N 1 SEWON </li>
-            </ul>
-        </div>
-    </section>
+        // Fungsi utama untuk MENGIRIM EVENT BARU
+        async function kirimEvent() {
+            const title = document.getElementById('title').value.trim();
+            const body = bodyTextarea.value.trim();
+            const eventDate = document.getElementById('event-date').value;
 
-    <section> 
-        <div class="lainnya">
-            <h3>Organisasi yang pernah di ikuti</h3>
-                <p> SMK N 1 SEWON </p>
-            <ul>
-                <li>ROHIS (ROHANI ISLAM)</li>
-            </ul>
-        </div>
-    </section>
+            if (title.length === 0 || body.length === 0 || eventDate.length === 0) {
+                tampilkanPesan("alert", "Judul, Deskripsi, dan Tanggal Event wajib diisi!");
+                return;
+            }
 
+            setLoading(true);
 
+            try {
+                // 1. Buat Objek Data Event
+                const eventData = {
+                    title: title,
+                    body: body,
+                    eventDate: eventDate, // Tanggal dalam format string ISO
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                };
+
+                // 2. Kirim data ke path BARU: /events
+                // push() akan membuat ID unik baru setiap kali dikirim
+                await database.ref('events').push(eventData);
+                
+                tampilkanPesan("success", `Event berhasil ditambahkan! Mahasiswa bisa melihat daftar event terbaru.`);
+                
+                // Reset form setelah sukses
+                document.getElementById('title').value = '';
+                document.getElementById('event-date').value = '';
+                bodyTextarea.value = '';
+                charCount.textContent = '0';
+
+            } catch (error) {
+                console.error("Firebase DB Error:", error);
+                tampilkanPesan("error", "Gagal menulis event ke database. Cek Firebase Config di script ini.");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // --- FUNGSI HELPER UI ---
+        function setLoading(isLoading) {
+            sendButton.disabled = isLoading;
+            if (isLoading) {
+                buttonText.textContent = 'Menambahkan Event...';
+                loadingSpinner.classList.remove('hidden');
+                sendButton.classList.add('opacity-70');
+            } else {
+                buttonText.textContent = 'TAMBAH EVENT BARU';
+                loadingSpinner.classList.add('hidden');
+                sendButton.classList.remove('opacity-70');
+            }
+        }
+
+        function tampilkanPesan(type, message) {
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800', 'bg-yellow-100', 'text-yellow-800');
+            
+            if (type === 'success') {
+                statusMessage.classList.add('bg-green-100', 'text-green-800');
+            } else if (type === 'error' || type === 'alert') {
+                statusMessage.classList.add('bg-red-100', 'text-red-800');
+            }
+            
+            setTimeout(() => {
+                statusMessage.classList.add('hidden');
+            }, 5000);
+        }
+    </script>
 </body>
 </html>
