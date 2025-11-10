@@ -3,13 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InforMind Admin Kirim Event (Spark Plan)</title>
+    <title>InforMind Admin Dashboard (Final Fix - Pastikan Anonymous Auth Aktif)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Tambahkan Firebase SDK untuk Database -->
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Memuat Firebase Modular SDK v11 (App, Database, Auth, dan Storage) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // Menggunakan Realtime Database (RTDB)
+        import { getDatabase, ref, push, set, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js"; 
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        
+        // --- KONFIGURASI FIREBASE EKSPLISIT DARI PENGGUNA (informind-17dca) ---
+        const EXPLICIT_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDxylTPNCo5bPgitF34WQLX6ONIgqRGWvg",
+            authDomain: "informind-17dca.firebaseapp.com",
+            databaseURL: "https://informind-17dca-default-rtdb.firebaseio.com", // Dipastikan Realtime DB
+            projectId: "informind-17dca",
+            storageBucket: "informind-17dca.firebasestorage.app",
+            messagingSenderId: "692443703186",
+            appId: "1:692443703186:web:54b7568366f55ed36a834b",
+        };
 
-    <style>  
+        // --- VARIABLE GLOBAL DARI CANVAS ---
+        const appId = EXPLICIT_FIREBASE_CONFIG.projectId; 
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // Inisialisasi Firebase
+        const app = initializeApp(EXPLICIT_FIREBASE_CONFIG);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+        const storage = getStorage(app); 
+        
+        // Ambil Elemen UI (untuk diakses oleh fungsi global)
+        const statusMessage = document.getElementById('status-message');
+        const bodyTextarea = document.getElementById('body');
+        const charCount = document.getElementById('char-count');
+        const sendButton = document.getElementById('send-button');
+        const buttonText = document.getElementById('button-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const alarmButton = document.getElementById('alarm-button');
+        const alarmButtonText = document.getElementById('alarm-button-text');
+        const alarmLoadingSpinner = document.getElementById('alarm-loading-spinner');
+        const deleteButton = document.getElementById('delete-button');
+        const deleteButtonText = document.getElementById('delete-button-text');
+        const deleteLoadingSpinner = document.getElementById('delete-loading-spinner');
+        const mediaFile = document.getElementById('media-file');
+        const userIdDisplay = document.getElementById('user-id-display');
+        
+        // Authentication State
+        let currentUserId = null;
+        let isAuthReady = false; 
+
+        // --- AUTENTIKASI DAN INISIALISASI ---
+        function setupAuthListener() {
+            userIdDisplay.textContent = 'Status: Memuat... | User ID: Menunggu';
+            
+            // Menggunakan onAuthStateChanged untuk memastikan status login final
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentUserId = user.uid;
+                    isAuthReady = true;
+                    console.log("Autentikasi Firebase Berhasil. User ID:", currentUserId);
+                    userIdDisplay.innerHTML = `<span class="text-green-600 font-bold">Status: SIAP</span> | User ID: ${currentUserId}`;
+                    // Setelah SIAP, aktifkan semua tombol
+                    sendButton.disabled = false; 
+                    alarmButton.disabled = false; 
+                    deleteButton.disabled = false;
+                    window.tampilkanPesan('success', 'Selamat, Autentikasi Admin Berhasil!');
+                } else {
+                    // 🚨 PENTING: Jika Autentikasi gagal, coba lagi dengan kunci rahasia atau Anonymous
+                    if (initialAuthToken) {
+                        // Coba pakai kunci Canvas (biasanya gagal kalau pakai config eksternal)
+                        signInWithCustomToken(auth, initialAuthToken).catch(error => {
+                            console.error("Sign-in dengan Custom Token Gagal:", error);
+                            signInAnonymously(auth); // Fallback ke anonim
+                        });
+                    } else {
+                        // Coba pakai Anonymous Auth (Harus diaktifkan di konsol Firebase!)
+                        signInAnonymously(auth).catch(error => {
+                            console.error("Sign-in Anonymous Gagal. Pastikan 'Anonymous' diaktifkan di Firebase Console:", error.code, error.message);
+                            userIdDisplay.innerHTML = `<span class="text-red-600 font-bold">Status: ERROR</span> | Cek log konsol untuk detail error (Kode: ${error.code})!`;
+                            window.tampilkanPesan('error', `Autentikasi gagal. Kode error: ${error.code}. Mohon aktifkan Anonymous Auth di Firebase Console.`);
+                        });
+                    }
+                }
+            });
+        }
+        
+        // --- FUNGSI HELPER UI ---
+        window.setLoading = (isLoading, button, buttonTextElement, spinnerElement, defaultText) => {
+            // Tombol hanya bisa ditekan jika Autentikasi sudah SIAP DAN tidak sedang Loading
+            button.disabled = isLoading || !isAuthReady; 
+            if (isLoading) {
+                buttonTextElement.textContent = defaultText;
+                spinnerElement.classList.remove('hidden');
+                button.classList.add('opacity-70');
+                button.disabled = true; // Nonaktifkan saat proses berlangsung
+            } else {
+                buttonTextElement.textContent = defaultText;
+                spinnerElement.classList.add('hidden');
+                button.classList.remove('opacity-70');
+                if (isAuthReady) {
+                    button.disabled = false;
+                }
+            }
+        }
+
+        window.tampilkanPesan = (type, message) => {
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800', 'bg-yellow-100', 'text-yellow-800');
+            
+            if (type === 'success') {
+                statusMessage.classList.add('bg-green-100', 'text-green-800');
+            } else if (type === 'error') {
+                statusMessage.classList.add('bg-red-100', 'text-red-800');
+            } else if (type === 'alert') {
+                 statusMessage.classList.add('bg-yellow-100', 'text-yellow-800');
+            }
+            
+            if (type === 'error') console.error(message);
+
+            setTimeout(() => {
+                statusMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        // --- FUNGSI GLOBAL ALARM ---
+        window.kirimAlarm = async () => {
+            if (!isAuthReady) return window.tampilkanPesan('alert', 'Tunggu Autentikasi SIAP baru bisa kirim data.');
+            
+            const time = document.getElementById('alarm-time').value.trim();
+            const message = document.getElementById('alarm-message').value.trim();
+
+            if (time.length === 0 || message.length === 0) {
+                window.tampilkanPesan("alert", "Waktu dan Pesan Alarm wajib diisi!");
+                return;
+            }
+
+            window.setLoading(true, alarmButton, alarmButtonText, alarmLoadingSpinner, 'Menjadwalkan...');
+
+            try {
+                const alarmData = {
+                    time: time,
+                    message: message,
+                    timestamp: serverTimestamp() 
+                };
+                // Realtime DB Path: global_alarm
+                const alarmPath = `global_alarm`; 
+                await set(ref(db, alarmPath), alarmData);
+                window.tampilkanPesan("success", `Global Alarm berhasil dijadwalkan untuk pukul ${time}!`);
+
+            } catch (error) {
+                console.error("Firebase DB Error:", error);
+                window.tampilkanPesan("error", "Gagal menjadwalkan alarm. Cek log konsol.");
+            } finally {
+                window.setLoading(false, alarmButton, alarmButtonText, alarmLoadingSpinner, 'JADWALKAN GLOBAL ALARM');
+            }
+        }
+        
+        // --- FUNGSI KIRIM EVENT (DENGAN FILE UPLOAD) ---
+        window.kirimEvent = async () => {
+            // Pengecekan status ready
+            if (!isAuthReady) return window.tampilkanPesan('alert', 'Tunggu Autentikasi SIAP baru bisa kirim data.');
+
+            const title = document.getElementById('title').value.trim();
+            const body = bodyTextarea.value.trim();
+            const eventDate = document.getElementById('event-date').value;
+            const fileInput = document.getElementById('media-file'); 
+            const mediaType = document.getElementById('media-type').value; 
+            const manualUrl = document.getElementById('media-url-manual').value.trim();
+
+            if (title.length === 0 || body.length === 0 || eventDate.length === 0) {
+                window.tampilkanPesan("alert", "Judul, Deskripsi, dan Tanggal Event wajib diisi!");
+                return;
+            }
+
+            window.setLoading(true, sendButton, buttonText, loadingSpinner, 'Menambahkan Event...');
+
+            let finalMediaUrl = manualUrl; 
+            
+            try {
+                // 1. Cek apakah ada file yang dipilih
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    window.tampilkanPesan('alert', `Mengunggah file "${file.name}"... Proses ini butuh waktu. Jangan tutup halaman!`);
+                    
+                    // 2. Upload File ke Firebase Storage
+                    // Storage Path: event_media/{filename}
+                    const fileExtension = file.name.split('.').pop();
+                    const fileName = `event_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+                    const storageReference = storageRef(storage, `event_media/${fileName}`);
+
+                    const uploadTask = await uploadBytes(storageReference, file);
+                    
+                    // 3. Ambil URL publik dari file yang baru diupload
+                    finalMediaUrl = await getDownloadURL(uploadTask.ref);
+
+                    window.tampilkanPesan('alert', `URL media berhasil didapatkan. Melanjutkan ke database...`);
+                }
+                
+                // 4. Kirim data event ke Realtime Database
+                const eventData = {
+                    title: title,
+                    body: body,
+                    eventDate: eventDate, 
+                    mediaUrl: finalMediaUrl, 
+                    mediaType: mediaType,
+                    createdAt: serverTimestamp()
+                };
+
+                // Realtime DB Path: events
+                const eventsRef = ref(db, `events`); 
+                await push(eventsRef, eventData);
+                
+                window.tampilkanPesan("success", `Event "${title}" berhasil ditambahkan!`);
+                
+                // 5. Reset form setelah sukses
+                document.getElementById('title').value = '';
+                document.getElementById('event-date').value = '';
+                bodyTextarea.value = '';
+                fileInput.value = ''; 
+                document.getElementById('media-url-manual').value = ''; 
+                document.getElementById('media-type').value = 'Foto'; 
+                charCount.textContent = '0';
+
+            } catch (error) {
+                console.error("Kesalahan Saat Menulis Event:", error);
+                window.tampilkanPesan("error", `Gagal menulis event! Error: ${error.message}`);
+            } finally {
+                window.setLoading(false, sendButton, buttonText, loadingSpinner, 'TAMBAH EVENT BARU');
+            }
+        }
+
+        // --- FUNGSI HAPUS EVENT ---
+        window.hapusEvent = async () => {
+            if (!isAuthReady) return window.tampilkanPesan('alert', 'Tunggu Autentikasi SIAP baru bisa kirim data.');
+
+            const eventIdToDelete = document.getElementById('event-id-delete').value.trim();
+            if (eventIdToDelete.length === 0) {
+                window.tampilkanPesan("alert", "ID Event wajib diisi untuk menghapus!");
+                return;
+            }
+
+            window.setLoading(true, deleteButton, deleteButtonText, deleteLoadingSpinner, 'Menghapus Event...');
+
+            try {
+                // Realtime DB Path: events/{eventId}
+                const eventPath = `events/${eventIdToDelete}`; 
+                await remove(ref(db, eventPath));
+                
+                window.tampilkanPesan("success", `Event dengan ID ${eventIdToDelete} berhasil dihapus/dibatalkan!`);
+                document.getElementById('event-id-delete').value = '';
+
+            } catch (error) {
+                console.error("Firebase DB Error:", error);
+                window.tampilkanPesan("error", "Gagal menghapus event. Pastikan ID benar.");
+            } finally {
+                window.setLoading(false, deleteButton, deleteButtonText, deleteLoadingSpinner, 'HAPUS EVENT / BATALKAN');
+            }
+        }
+        
+        // --- EVENT LISTENERS ---
+        bodyTextarea.addEventListener('input', () => {
+            charCount.textContent = bodyTextarea.value.length;
+        });
+        
+        // Panggil inisialisasi
+        setupAuthListener();
+    </script>
+    
+    <style>  
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f7f9fb;
@@ -18,31 +283,71 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            padding: 2rem 0; 
         }
         .container {
-            width: 90%;
-            max-width: 500px;
-            padding: 2rem;
+            width: 95%; 
+            max-width: 700px;
+            padding: 1.5rem; 
             background-color: white;
             border-radius: 16px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
         }
-        button {
-            transition: all 0.15s ease-in-out;
+        .feature-box {
+            border: 1px solid #e5e7eb;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem; 
         }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4);
+        button { 
+            transition: all 0.15s ease-in-out; 
+        }
+        button:hover:enabled { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4); 
+        }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 class="text-3xl font-extrabold text-indigo-700 mb-2">InforMind Event Creator</h1>
-        <p class="text-sm text-gray-500 mb-6">Tambahkan Event Baru ke Daftar Realtime Mahasiswa.</p>
+        <h1 class="text-3xl font-extrabold text-indigo-700 mb-2">InforMind Admin Control</h1>
+        <p class="text-sm text-gray-500 mb-6">Kontrol Event List, Media Upload, dan Global Alarm Mahasiswa UTY.</p>
+        
+        <!-- Pesan Status & User ID -->
+        <div id="status-message" class="hidden p-3 mb-4 rounded-lg text-sm font-semibold"></div>
+        <p id="user-id-display" class="text-xs text-gray-500 mb-4 p-2 bg-gray-100 rounded-lg truncate font-medium">Status: Memuat... | User ID: Menunggu</p>
 
-        <!-- Form Event -->
-        <div id="notification-form">
+        <!-- FITUR 1: GLOBAL ALARM SENDER -->
+        <div class="feature-box border-red-400 bg-red-50">
+            <h2 class="text-xl font-bold text-red-700 mb-4 flex items-center">
+                Alarm Bangun Pagi (Pemicu Lokal)
+            </h2>
+            <div class="mb-4">
+                <label for="alarm-time" class="block text-sm font-medium text-gray-700 mb-1">Pukul Berapa Alarm Berbunyi? (WIB)</label>
+                <input type="time" id="alarm-time" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500" required>
+            </div>
+            <div class="mb-6">
+                <label for="alarm-message" class="block text-sm font-medium text-gray-700 mb-1">Pesan Alarm (Contoh: Waktunya kuliah pagi!)</label>
+                <input type="text" id="alarm-message" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500" placeholder="Pesan Alarm" maxlength="100" value="Waktunya bangun, kuliah pagi, Bro!">
+            </div>
+            <button id="alarm-button" onclick="kirimAlarm()" disabled class="w-full bg-red-600 text-white font-semibold p-3 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center">
+                <span id="alarm-button-text">JADWALKAN GLOBAL ALARM</span>
+                <svg id="alarm-loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </button>
+        </div>
+
+
+        <!-- FITUR 2: EVENT LIST SENDER (DIUPGRADE DENGAN FILE UPLOAD) -->
+        <div class="feature-box border-indigo-400">
+            <h2 class="text-xl font-bold text-indigo-700 mb-4">Tambah Event Kampus (Upload Foto/Video)</h2>
+            <!-- Form Event -->
             <div class="mb-4">
                 <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Nama Event (Judul)</label>
                 <input type="text" id="title" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="Contoh: Kuliah Umum AI Marketing" maxlength="50">
@@ -53,13 +358,38 @@
                 <input type="datetime-local" id="event-date" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
             </div>
 
+            <!-- FILE UPLOAD -->
+            <div class="mb-4 p-4 border border-green-300 bg-green-50 rounded-lg">
+                <label for="media-file" class="block text-sm font-bold text-green-700 mb-2">Upload File Media (Foto/Video Poster)</label>
+                <input type="file" id="media-file" accept="image/*,video/*,audio/*" class="w-full text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200">
+                <p class="text-xs text-gray-500 mt-2">PENTING: Pilih salah satu antara Upload File atau masukkan URL Manual di bawah.</p>
+            </div>
+
+            <!-- TIPE MEDIA (JIKA TIDAK UPLOAD) -->
+            <div class="mb-4">
+                <label for="media-type" class="block text-sm font-medium text-gray-700 mb-1">Tipe Konten Media</label>
+                <select id="media-type" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
+                    <option value="Foto">Foto / Poster</option>
+                    <option value="Video">Video / YouTube</option>
+                    <option value="Link">Link Eksternal</option>
+                    <option value="Lagu">Lagu / SoundCloud / Spotify</option>
+                    <option value="Dokumen">Dokumen PDF/PPT</option>
+                </select>
+            </div>
+
+            <!-- MANUAL URL (FALLBACK/LINK EKSTERNAL) -->
+            <div class="mb-6">
+                <label for="media-url-manual" class="block text-sm font-medium text-gray-700 mb-1">Atau masukkan URL Manual (jika tidak upload)</label>
+                <input type="url" id="media-url-manual" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500" placeholder="Contoh: https://youtube.com/link-video-promo">
+            </div>
+
             <div class="mb-6">
                 <label for="body" class="block text-sm font-medium text-gray-700 mb-1">Deskripsi Singkat Event</label>
                 <textarea id="body" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="Lokasi, Pembicara, dan detail penting lainnya..." maxlength="250"></textarea>
                 <p class="text-xs text-gray-400 mt-1 text-right"><span id="char-count">0</span>/250 karakter</p>
             </div>
             
-            <button id="send-button" onclick="kirimEvent()" class="w-full bg-indigo-600 text-white font-semibold p-3 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center">
+            <button id="send-button" onclick="kirimEvent()" disabled class="w-full bg-indigo-600 text-white font-semibold p-3 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center">
                 <span id="button-text">TAMBAH EVENT BARU</span>
                 <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -67,110 +397,22 @@
                 </svg>
             </button>
         </div>
-
-        <!-- Feedback Notifikasi -->
-        <div id="status-message" class="mt-4 p-3 rounded-lg text-center font-medium hidden"></div>
-
+        
+        <!-- FITUR 3: HAPUS EVENT -->
+        <div class="feature-box border-gray-300 bg-gray-50">
+            <h2 class="text-xl font-bold text-gray-700 mb-4">Hapus/Batalkan Event Berdasarkan ID</h2>
+            <div class="mb-6">
+                <label for="event-id-delete" class="block text-sm font-medium text-gray-700 mb-1">ID Event dari Database (Contoh: -NqXyZ1...)</label>
+                <input type="text" id="event-id-delete" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-gray-500 focus:border-gray-500" placeholder="Masukkan ID unik Event di sini" maxlength="30">
+            </div>
+            <button id="delete-button" onclick="hapusEvent()" disabled class="w-full bg-gray-600 text-white font-semibold p-3 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 flex items-center justify-center">
+                <span id="delete-button-text">HAPUS EVENT / BATALKAN</span>
+                <svg id="delete-loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </button>
+        </div>
     </div>
-
-    <script>
-        // PENTING: GANTI DENGAN FIREBASE CONFIG PROYEK informind-17dca KAMU
-        const firebaseConfig = {
-            apiKey: "AIzaSyDxylTPNCo5bPgitF34WQLX6ONIgqRGWvg",
-  authDomain: "informind-17dca.firebaseapp.com",
-  databaseURL: "https://informind-17dca-default-rtdb.firebaseio.com",
-  projectId: "informind-17dca",
-  storageBucket: "informind-17dca.firebasestorage.app",
-  messagingSenderId: "692443703186",
-  appId: "1:692443703186:web:54b7568366f55ed36a834b",
-        };
-        
-        // Inisialisasi Firebase App
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
-        const bodyTextarea = document.getElementById('body');
-        const charCount = document.getElementById('char-count');
-        const statusMessage = document.getElementById('status-message');
-        const sendButton = document.getElementById('send-button');
-        const buttonText = document.getElementById('button-text');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        
-        // Update character count real-time
-        bodyTextarea.addEventListener('input', () => {
-            charCount.textContent = bodyTextarea.value.length;
-        });
-
-        // Fungsi utama untuk MENGIRIM EVENT BARU
-        async function kirimEvent() {
-            const title = document.getElementById('title').value.trim();
-            const body = bodyTextarea.value.trim();
-            const eventDate = document.getElementById('event-date').value;
-
-            if (title.length === 0 || body.length === 0 || eventDate.length === 0) {
-                tampilkanPesan("alert", "Judul, Deskripsi, dan Tanggal Event wajib diisi!");
-                return;
-            }
-
-            setLoading(true);
-
-            try {
-                // 1. Buat Objek Data Event
-                const eventData = {
-                    title: title,
-                    body: body,
-                    eventDate: eventDate, // Tanggal dalam format string ISO
-                    createdAt: firebase.database.ServerValue.TIMESTAMP
-                };
-
-                // 2. Kirim data ke path BARU: /events
-                // push() akan membuat ID unik baru setiap kali dikirim
-                await database.ref('events').push(eventData);
-                
-                tampilkanPesan("success", `Event berhasil ditambahkan! Mahasiswa bisa melihat daftar event terbaru.`);
-                
-                // Reset form setelah sukses
-                document.getElementById('title').value = '';
-                document.getElementById('event-date').value = '';
-                bodyTextarea.value = '';
-                charCount.textContent = '0';
-
-            } catch (error) {
-                console.error("Firebase DB Error:", error);
-                tampilkanPesan("error", "Gagal menulis event ke database. Cek Firebase Config di script ini.");
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        // --- FUNGSI HELPER UI ---
-        function setLoading(isLoading) {
-            sendButton.disabled = isLoading;
-            if (isLoading) {
-                buttonText.textContent = 'Menambahkan Event...';
-                loadingSpinner.classList.remove('hidden');
-                sendButton.classList.add('opacity-70');
-            } else {
-                buttonText.textContent = 'TAMBAH EVENT BARU';
-                loadingSpinner.classList.add('hidden');
-                sendButton.classList.remove('opacity-70');
-            }
-        }
-
-        function tampilkanPesan(type, message) {
-            statusMessage.textContent = message;
-            statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800', 'bg-yellow-100', 'text-yellow-800');
-            
-            if (type === 'success') {
-                statusMessage.classList.add('bg-green-100', 'text-green-800');
-            } else if (type === 'error' || type === 'alert') {
-                statusMessage.classList.add('bg-red-100', 'text-red-800');
-            }
-            
-            setTimeout(() => {
-                statusMessage.classList.add('hidden');
-            }, 5000);
-        }
-    </script>
 </body>
 </html>
