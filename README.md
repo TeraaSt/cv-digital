@@ -1,1 +1,1 @@
-cv-digital
+admin.html
