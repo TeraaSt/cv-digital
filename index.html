@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InforMind Admin Dashboard (Final Fix - Pastikan Anonymous Auth Aktif)</title>
+    <title>InforMind Admin Dashboard (Mode Link Only Siap)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     
@@ -73,15 +73,13 @@
                     deleteButton.disabled = false;
                     window.tampilkanPesan('success', 'Selamat, Autentikasi Admin Berhasil!');
                 } else {
-                    // 🚨 PENTING: Jika Autentikasi gagal, coba lagi dengan kunci rahasia atau Anonymous
+                    // Coba pakai Anonymous Auth (Harus diaktifkan di konsol Firebase!)
                     if (initialAuthToken) {
-                        // Coba pakai kunci Canvas (biasanya gagal kalau pakai config eksternal)
                         signInWithCustomToken(auth, initialAuthToken).catch(error => {
                             console.error("Sign-in dengan Custom Token Gagal:", error);
                             signInAnonymously(auth); // Fallback ke anonim
                         });
                     } else {
-                        // Coba pakai Anonymous Auth (Harus diaktifkan di konsol Firebase!)
                         signInAnonymously(auth).catch(error => {
                             console.error("Sign-in Anonymous Gagal. Pastikan 'Anonymous' diaktifkan di Firebase Console:", error.code, error.message);
                             userIdDisplay.innerHTML = `<span class="text-red-600 font-bold">Status: ERROR</span> | Cek log konsol untuk detail error (Kode: ${error.code})!`;
@@ -180,18 +178,25 @@
                 return;
             }
 
+            // PENTING: Jika tidak ada URL manual DAN tidak ada file, harusnya ada pesan error juga
+            if (manualUrl.length === 0 && fileInput.files.length === 0) {
+                 window.tampilkanPesan("alert", "Anda harus memasukkan Link Manual ATAU Upload File Media.");
+                 return;
+            }
+
+
             window.setLoading(true, sendButton, buttonText, loadingSpinner, 'Menambahkan Event...');
 
+            // FINAL MEDIA URL AKAN DEFAULT KE MANUAL URL
             let finalMediaUrl = manualUrl; 
             
             try {
-                // 1. Cek apakah ada file yang dipilih
+                // 1. Cek apakah ada file yang dipilih (LOGIC INI HANYA JALAN JIKA ADA FILE DIPILIH)
                 if (fileInput.files.length > 0) {
                     const file = fileInput.files[0];
                     window.tampilkanPesan('alert', `Mengunggah file "${file.name}"... Proses ini butuh waktu. Jangan tutup halaman!`);
                     
-                    // 2. Upload File ke Firebase Storage
-                    // Storage Path: event_media/{filename}
+                    // 2. Upload File ke Firebase Storage (INI JALUR YANG LAMA TADI)
                     const fileExtension = file.name.split('.').pop();
                     const fileName = `event_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
                     const storageReference = storageRef(storage, `event_media/${fileName}`);
@@ -209,7 +214,7 @@
                     title: title,
                     body: body,
                     eventDate: eventDate, 
-                    mediaUrl: finalMediaUrl, 
+                    mediaUrl: finalMediaUrl, // Jika file diabaikan, ini akan berisi manualUrl
                     mediaType: mediaType,
                     createdAt: serverTimestamp()
                 };
@@ -346,7 +351,7 @@
 
         <!-- FITUR 2: EVENT LIST SENDER (DIUPGRADE DENGAN FILE UPLOAD) -->
         <div class="feature-box border-indigo-400">
-            <h2 class="text-xl font-bold text-indigo-700 mb-4">Tambah Event Kampus (Upload Foto/Video)</h2>
+            <h2 class="text-xl font-bold text-indigo-700 mb-4">Tambah Event Kampus (Link Foto/Video)</h2>
             <!-- Form Event -->
             <div class="mb-4">
                 <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Nama Event (Judul)</label>
@@ -358,14 +363,14 @@
                 <input type="datetime-local" id="event-date" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
             </div>
 
-            <!-- FILE UPLOAD -->
+            <!-- FILE UPLOAD (DIBIARKAN OPSIONAL) -->
             <div class="mb-4 p-4 border border-green-300 bg-green-50 rounded-lg">
-                <label for="media-file" class="block text-sm font-bold text-green-700 mb-2">Upload File Media (Foto/Video Poster)</label>
+                <label for="media-file" class="block text-sm font-bold text-green-700 mb-2">Upload File Media (OPSIONAL, jika memilih link, ini dikosongkan)</label>
                 <input type="file" id="media-file" accept="image/*,video/*,audio/*" class="w-full text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200">
-                <p class="text-xs text-gray-500 mt-2">PENTING: Pilih salah satu antara Upload File atau masukkan URL Manual di bawah.</p>
+                <p class="text-xs text-gray-500 mt-2">PENTING: Cukup masukkan URL Manual di bawah jika Anda tidak mau Upload File.</p>
             </div>
 
-            <!-- TIPE MEDIA (JIKA TIDAK UPLOAD) -->
+            <!-- TIPE MEDIA -->
             <div class="mb-4">
                 <label for="media-type" class="block text-sm font-medium text-gray-700 mb-1">Tipe Konten Media</label>
                 <select id="media-type" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
@@ -377,10 +382,10 @@
                 </select>
             </div>
 
-            <!-- MANUAL URL (FALLBACK/LINK EKSTERNAL) -->
+            <!-- MANUAL URL (WAJIB DIISI JIKA TIDAK ADA FILE) -->
             <div class="mb-6">
-                <label for="media-url-manual" class="block text-sm font-medium text-gray-700 mb-1">Atau masukkan URL Manual (jika tidak upload)</label>
-                <input type="url" id="media-url-manual" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500" placeholder="Contoh: https://youtube.com/link-video-promo">
+                <label for="media-url-manual" class="block text-sm font-bold text-gray-700 mb-1">Link URL Poster/Video (WAJIB diisi jika tidak Upload File)</label>
+                <input type="url" id="media-url-manual" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500" placeholder="Contoh: https://youtube.com/link-video-promo atau link gambar">
             </div>
 
             <div class="mb-6">
